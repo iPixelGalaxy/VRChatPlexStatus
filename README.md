@@ -10,12 +10,12 @@ Automatically show what you're watching or listening to on Plex in your VRChat s
 
 ## What Does This Do?
 
-When you play something on Plex (a movie, TV show, or music), this app automatically updates your VRChat status to show what you're playing. When you stop playing, it restores your original status.
+When you play something on Plex (a Movie, TV Show, or Music), this app automatically updates your VRChat status to show what you're playing. When you stop playing, it restores your original status.
 
 **Example statuses:**
-- `Inception` (movie)
-- `Breaking Bad S1E5` (TV show)
-- `Bohemian Rhapsody Queen | A Night at the Opera` (music)
+- `KPop Demon Hunters` (Movie)
+- `Breaking Bad S1E5` (TV Show)
+- `GOOD ENEMY | PVRIS` (Music)
 
 ---
 
@@ -115,7 +115,7 @@ git clone https://github.com/iPixelGalaxy/VRChatPlexStatus.git
 
 **If your server isn't listed:**
 - Choose "Enter address manually"
-- Type your server's address, for example: `http://192.168.1.100:32400`
+- Type your server's address, for example: `http://192.168.1.67:32400`
 - Press Enter
 
 ### Step 7: Log in to VRChat
