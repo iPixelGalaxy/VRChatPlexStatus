@@ -561,9 +561,93 @@ async function main() {
 	let statusCheckCounter = 0
 	const statusCheckInterval = 20 // Check user status every ~10 seconds (20 * 500ms)
 
+	// Retry state tracking
+	let apiRetryAttempts = []
+	const MAX_RETRIES = 3
+	const RETRY_WINDOW_MS = 5 * 60 * 1000 // 5 minutes
+
+	function truncateStatus(status, maxLength = 32) {
+		if (status.length <= maxLength) return status
+		return status.substring(0, maxLength - 3) + '...'
+	}
+
+	function canRetry() {
+		const now = Date.now()
+		apiRetryAttempts = apiRetryAttempts.filter(ts => now - ts < RETRY_WINDOW_MS)
+		return apiRetryAttempts.length < MAX_RETRIES
+	}
+
+	function recordRetryAttempt() {
+		apiRetryAttempts.push(Date.now())
+	}
+
+	function resetRetryAttempts() {
+		apiRetryAttempts = []
+	}
+
+	async function updateVRChatStatus(originalMessage) {
+		let statusMessage = truncateStatus(originalMessage)
+		const LENGTH_ERROR = 'statusDescription exceeds maximum string length'
+		let truncationAttempts = 0
+		const MAX_TRUNCATION_ATTEMPTS = 3
+
+		while (truncationAttempts < MAX_TRUNCATION_ATTEMPTS) {
+			try {
+				const result = await vrchatAPI.updateUser({
+					path: { userId: currentUserId },
+					body: { statusDescription: statusMessage }
+				})
+
+				if (result.error) {
+					const errorMsg = result.error.message || String(result.error)
+					if (errorMsg.includes(LENGTH_ERROR)) {
+						truncationAttempts++
+						// Remove one character before "..."
+						statusMessage = statusMessage.endsWith('...')
+							? statusMessage.slice(0, -4) + '...'
+							: statusMessage.slice(0, -1)
+						console.log(chalk.yellow(`Status too long, truncating: "${statusMessage}"`))
+						continue
+					}
+					throw new Error(errorMsg)
+				}
+
+				resetRetryAttempts()
+				return { success: true, message: statusMessage }
+
+			} catch (error) {
+				if (error.message.includes(LENGTH_ERROR)) {
+					truncationAttempts++
+					statusMessage = statusMessage.endsWith('...')
+						? statusMessage.slice(0, -4) + '...'
+						: statusMessage.slice(0, -1)
+					console.log(chalk.yellow(`Status too long, truncating: "${statusMessage}"`))
+					continue
+				}
+
+				if (canRetry()) {
+					recordRetryAttempt()
+					console.log(chalk.yellow('Retrying status update...'))
+					await new Promise(r => setTimeout(r, 1000))
+					continue
+				}
+
+				return { success: false, error: error.message }
+			}
+		}
+
+		console.error(chalk.red('Status too long even after truncation. Giving up.'))
+		return { success: false, error: 'Permanent length error', permanent: true }
+	}
+
 	console.log(chalk.green('\nReady! Monitoring Plex sessions... (Ctrl+C to exit)\n'))
 
+	// Prevent concurrent polling executions
+	let isPolling = false
+
 	async function getPlexSessions() {
+		if (isPolling) return // Skip if previous poll is still running
+		isPolling = true
 		try {
 			const sessions = await plexAPI.sessions.getSessions()
 
@@ -587,10 +671,11 @@ async function main() {
 						subtitle = ''
 						break
 					case 'episode':
-						title = adminSession.grandparentTitle
-						subtitle = `S${adminSession.parentIndex}E${adminSession.index}`
-						if (adminSession.parentIndex === 0)
-							subtitle = `Special Episode ${adminSession.index}`
+						title = `S${adminSession.parentIndex}E${adminSession.index}`
+						subtitle = adminSession.grandparentTitle
+						if (adminSession.parentIndex === 0) {
+							title = `Special E${adminSession.index}`
+						}
 						break
 				}
 
@@ -598,42 +683,27 @@ async function main() {
 
 				// Only update VRChat status when the message content changes
 				if (lastOSCMessage !== statusMessage) {
-					try {
-						const result = await vrchatAPI.updateUser({
-							path: { userId: currentUserId },
-							body: { statusDescription: statusMessage }
-						})
-
-						if (result.error) {
-							console.error(chalk.red('API error:'), result.error.message || result.error)
-						} else {
-							console.log(chalk.green('Status:'), statusMessage)
-							lastOSCMessage = statusMessage
-							// Save original status in case app is killed
-							savePendingRestore(originalStatus)
-						}
-					} catch (error) {
-						console.error(chalk.red('Error updating status:'), error.message)
+					const updateResult = await updateVRChatStatus(statusMessage)
+					if (updateResult.success) {
+						console.log(chalk.green('Status:'), updateResult.message)
+						lastOSCMessage = statusMessage
+						// Save original status in case app is killed
+						savePendingRestore(originalStatus)
+					} else if (!updateResult.permanent) {
+						console.error(chalk.red('Error updating status:'), updateResult.error)
 					}
 				}
 			}
 
 			// Playback stopped / no playback - restore original status
 			if (!adminSession && lastOSCMessage !== '') {
-				try {
-					const result = await vrchatAPI.updateUser({
-						path: { userId: currentUserId },
-						body: { statusDescription: originalStatus }
-					})
-					if (result.error) {
-						console.error(chalk.red('API error:'), result.error.message || result.error)
-					} else {
-						console.log(chalk.yellow('Restored:'), `"${originalStatus}"`)
-						lastOSCMessage = ''
-						clearPendingRestore()
-					}
-				} catch (error) {
-					console.error(chalk.red('Error restoring status:'), error.message)
+				const updateResult = await updateVRChatStatus(originalStatus)
+				if (updateResult.success) {
+					console.log(chalk.yellow('Restored:'), `"${updateResult.message}"`)
+					lastOSCMessage = ''
+					clearPendingRestore()
+				} else if (!updateResult.permanent) {
+					console.error(chalk.red('Error restoring status:'), updateResult.error)
 				}
 			}
 
@@ -663,6 +733,8 @@ async function main() {
 			if (!shouldIgnore) {
 				console.error(chalk.red('Plex error:'), error.message)
 			}
+		} finally {
+			isPolling = false
 		}
 	}
 

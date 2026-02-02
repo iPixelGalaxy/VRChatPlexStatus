@@ -14,8 +14,11 @@ When you play something on Plex (a Movie, TV Show, or Music), this app automatic
 
 **Example statuses:**
 - `KPop Demon Hunters` (Movie)
-- `Breaking Bad S1E5` (TV Show)
+- `S1E5 Breaking Bad` (TV Show)
+- `S2E12 That Time I Got Reinca...` (TV Show - long title truncated)
 - `GOOD ENEMY | PVRIS` (Music)
+
+> **Note:** VRChat has a 32-character limit for status messages. Long titles are automatically truncated with "..." at the end.
 
 ---
 
