@@ -1,0 +1,5 @@
+.claude
+node_modules
+.env
+vrchat-session.sqlite
+plex-osc.ps1
