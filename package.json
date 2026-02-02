@@ -11,13 +11,12 @@
   "author": "MiaB",
   "license": "ISC",
   "dependencies": {
-    "@keyv/sqlite": "^4.0.8",
     "@lukehagar/plexjs": "^0.23.5",
     "chalk": "^4.1.2",
     "commander": "^12.1.0",
-    "dotenv": "^16.4.5",
     "keyv": "^5.6.0",
-    "node-osc": "^9.1.3",
+    "keyv-file": "^5.3.3",
+    "open": "^10.1.0",
     "prompt-sync": "^4.2.0",
     "vrchat": "^2.21.7"
   }
