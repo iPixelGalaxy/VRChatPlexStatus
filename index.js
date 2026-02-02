@@ -492,6 +492,8 @@ async function main() {
 
 	const pollingRateMs = parseInt(options.pollingRate) || 500
 	let lastOSCMessage = ''
+	let statusCheckCounter = 0
+	const statusCheckInterval = 20 // Check user status every ~10 seconds (20 * 500ms)
 
 	console.log(chalk.green('\nReady! Monitoring Plex sessions... (Ctrl+C to exit)\n'))
 
@@ -563,6 +565,26 @@ async function main() {
 					}
 				} catch (error) {
 					console.error(chalk.red('Error restoring status:'), error.message)
+				}
+			}
+
+			// Periodically check if user changed their status while no playback is active
+			if (!adminSession && lastOSCMessage === '') {
+				statusCheckCounter++
+				if (statusCheckCounter >= statusCheckInterval) {
+					statusCheckCounter = 0
+					try {
+						const userResult = await vrchatAPI.getCurrentUser()
+						if (userResult.data && userResult.data.statusDescription !== undefined) {
+							const currentStatus = userResult.data.statusDescription || ''
+							if (currentStatus !== originalStatus) {
+								originalStatus = currentStatus
+								console.log(chalk.cyan('Status updated:'), `"${originalStatus}"`)
+							}
+						}
+					} catch (error) {
+						// Silently ignore - not critical
+					}
 				}
 			}
 		} catch (error) {
