@@ -28,10 +28,9 @@ The setup wizard will:
 2. ✅ Install all required dependencies
 3. ✅ Create a launcher script
 4. ✅ Optionally add to VRCX auto-startup
-5. ✅ Optionally create a Desktop shortcut
-6. ✅ Guide you through Plex and VRChat login
+5. ✅ Guide you through Plex and VRChat login
 
-That's it! After setup, just double-click the Desktop shortcut or let VRCX start it automatically.
+That's it! After setup, just double-click the shortcut in the same directory or let VRCX start it automatically when you load up VRChat.
 
 ---
 
@@ -75,7 +74,7 @@ Node.js will be installed automatically by the setup wizard if needed.
 
 **Option B: Using Git (If you have Git installed)**
 ```bash
-git clone https://github.com/YOUR_USERNAME/VRChatPlexStatus.git
+git clone https://github.com/iPixelGalaxy/VRChatPlexStatus.git
 ```
 
 ### Step 3: Install Dependencies
@@ -143,9 +142,9 @@ Now play something on Plex and check your VRChat status - it should update autom
 
 After the first setup, you can run the app by:
 
-- **Double-click** the Desktop shortcut (if you created one)
+- **Double-click** the shortcut in the folder
 - **VRCX** will auto-start it (if you enabled that option)
-- **Or** open a terminal and run: `node index`
+- **Or** open a terminal and run: `node index` in the same directory.
 
 Your credentials are saved, so you won't need to log in again!
 
@@ -174,7 +173,7 @@ This usually means the app can't reach your Plex server. Try these fixes:
 
 2. **Use HTTP instead of HTTPS** - When entering your server address manually, try:
    ```
-   http://192.168.1.100:32400
+   http://192.168.1.67:32400
    ```
    (Replace with your actual IP address)
 
@@ -222,9 +221,8 @@ These files are only on your computer and are not shared with anyone.
 
 | File | Location | Purpose |
 |------|----------|---------|
-| `VRChatPlexStatus.ps1` | Project folder | PowerShell launcher script |
-| `VRChatPlexStatus.cmd` | `%AppData%\VRCX\Startup\` | VRCX auto-startup (optional) |
-| `VRChat Plex Status.cmd` | Desktop | Desktop shortcut (optional) |
+| `VRChatPlexStatus.lnk` | Project folder | Windows shortcut to launch the app |
+| `VRChatPlexStatus.lnk` | `%AppData%\VRCX\Startup\` | VRCX auto-startup (optional) |
 
 To delete all saved credentials:
 ```bash
@@ -236,10 +234,9 @@ node index --reset-all
 ## Uninstalling
 
 1. Stop the app if it's running (`Ctrl + C`)
-2. Delete the Desktop shortcut (if created)
-3. Delete `%AppData%\VRCX\Startup\VRChatPlexStatus.cmd` (if created)
-4. Delete the project folder
-5. (Optional) Uninstall Node.js from Windows Settings > Apps
+2. Delete `%AppData%\VRCX\Startup\VRChatPlexStatus.lnk` (if created)
+3. Delete the project folder
+4. (Optional) Uninstall Node.js from Windows Settings > Apps
 
 ---
 
