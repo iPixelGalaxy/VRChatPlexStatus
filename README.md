@@ -247,7 +247,3 @@ node index --reset-all
 
 - Generated with [Claude Code](https://claude.ai/claude-code) by Anthropic
 - Inspired by [Mickman1/plex-osc](https://github.com/Mickman1/plex-osc)
-
-## License
-
-ISC
