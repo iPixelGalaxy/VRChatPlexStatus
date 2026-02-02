@@ -29,6 +29,36 @@ const options = program.opts()
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const sessionFilePath = path.join(__dirname, 'vrchat-session.json')
 const configPath = path.join(__dirname, 'config.json')
+const pendingRestorePath = path.join(__dirname, '.pending-restore.json')
+
+// Pending restore management - saves state in case app is killed
+function savePendingRestore(status) {
+	try {
+		fs.writeFileSync(pendingRestorePath, JSON.stringify({ status, timestamp: Date.now() }))
+	} catch (e) { /* ignore */ }
+}
+
+function clearPendingRestore() {
+	try {
+		if (fs.existsSync(pendingRestorePath)) {
+			fs.unlinkSync(pendingRestorePath)
+		}
+	} catch (e) { /* ignore */ }
+}
+
+function loadPendingRestore() {
+	try {
+		if (fs.existsSync(pendingRestorePath)) {
+			const data = JSON.parse(fs.readFileSync(pendingRestorePath, 'utf-8'))
+			// Only use if less than 24 hours old
+			if (Date.now() - data.timestamp < 24 * 60 * 60 * 1000) {
+				return data.status
+			}
+			clearPendingRestore()
+		}
+	} catch (e) { /* ignore */ }
+	return null
+}
 
 // Prompter setup
 const prompter = prompt({ sigint: true })
@@ -373,6 +403,23 @@ async function setupVRChat() {
 			throw new Error(`Failed to login to VRChat: ${error.message}`)
 		}
 	}
+
+	// Check if we need to restore status from a previous crashed session
+	const pendingStatus = loadPendingRestore()
+	if (pendingStatus !== null) {
+		console.log(chalk.yellow('Detected unclean shutdown, restoring previous status...'))
+		try {
+			await vrchatAPI.updateUser({
+				path: { userId: currentUserId },
+				body: { statusDescription: pendingStatus }
+			})
+			originalStatus = pendingStatus
+			console.log(chalk.green(`Restored to: "${pendingStatus}"`))
+			clearPendingRestore()
+		} catch (error) {
+			console.log(chalk.red('Failed to restore previous status'))
+		}
+	}
 }
 
 // ============================================
@@ -387,33 +434,52 @@ async function restoreStatus() {
 			body: { statusDescription: originalStatus }
 		})
 		console.log(chalk.green(`Status restored to: "${originalStatus}"`))
+		clearPendingRestore()
 	} catch (error) {
 		console.error(chalk.red(`Failed to restore status: ${error.message}`))
 	}
 }
 
+let isShuttingDown = false
+
 async function cleanup() {
+	if (isShuttingDown) return
+	isShuttingDown = true
+
+	console.log('\nShutting down...')
 	await restoreStatus()
 	process.exit(0)
 }
 
-process.on('SIGINT', () => {
-	console.log('\nShutting down...')
-	cleanup()
+// Handle all termination signals
+process.on('SIGINT', cleanup)
+process.on('SIGTERM', cleanup)
+process.on('SIGHUP', cleanup)
+
+// Handle Windows-specific close events
+process.on('exit', () => {
+	if (!isShuttingDown && currentUserId) {
+		// Synchronous last-ditch attempt - won't always work but worth trying
+		console.log('Restoring status on exit...')
+	}
 })
 
-process.on('SIGTERM', () => {
-	console.log('\nShutting down...')
-	cleanup()
-})
+// For Windows console close
+if (process.platform === 'win32') {
+	process.on('message', (msg) => {
+		if (msg === 'shutdown') {
+			cleanup()
+		}
+	})
+}
 
-process.on('uncaughtException', (err) => {
+process.on('uncaughtException', async (err) => {
 	console.error('Error:', err.message)
-	process.exit(0)
+	await cleanup()
 })
 
-process.on('unhandledRejection', () => {
-	process.exit(0)
+process.on('unhandledRejection', async () => {
+	await cleanup()
 })
 
 // ============================================
@@ -543,6 +609,8 @@ async function main() {
 						} else {
 							console.log(chalk.green('Status:'), statusMessage)
 							lastOSCMessage = statusMessage
+							// Save original status in case app is killed
+							savePendingRestore(originalStatus)
 						}
 					} catch (error) {
 						console.error(chalk.red('Error updating status:'), error.message)
@@ -562,6 +630,7 @@ async function main() {
 					} else {
 						console.log(chalk.yellow('Restored:'), `"${originalStatus}"`)
 						lastOSCMessage = ''
+						clearPendingRestore()
 					}
 				} catch (error) {
 					console.error(chalk.red('Error restoring status:'), error.message)

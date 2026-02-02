@@ -3,4 +3,5 @@ node_modules
 .env
 config.json
 vrchat-session.json
+.pending-restore.json
 *.lnk
