@@ -230,7 +230,7 @@ async function selectPlexServer(token) {
 	if (servers.length === 0) {
 		console.log(chalk.yellow('\nNo Plex servers found on your account.'))
 		console.log('Please enter your Plex server address manually.')
-		const address = prompter('Server address (e.g., http://192.168.1.100:32400): ')
+		const address = prompter('Server address (e.g., http://192.168.1.67:32400): ')
 		if (!address) {
 			throw new Error('No server address provided')
 		}
@@ -273,7 +273,7 @@ async function selectPlexServer(token) {
 	const choiceNum = parseInt(choice)
 
 	if (choiceNum === servers.length + 1) {
-		const address = prompter('Server address (e.g., http://192.168.1.100:32400): ')
+		const address = prompter('Server address (e.g., http://192.168.1.67:32400): ')
 		if (!address) {
 			throw new Error('No server address provided')
 		}
@@ -506,7 +506,7 @@ async function testPlexConnection(plexAPI, address) {
 
 async function promptForManualAddress() {
 	console.log(chalk.yellow('\nEnter your Plex server address manually.'))
-	console.log(chalk.gray('Tip: Use HTTP for local servers (e.g., http://192.168.1.100:32400)'))
+	console.log(chalk.gray('Tip: Use HTTP for local servers (e.g., http://192.168.1.67:32400)'))
 	console.log(chalk.gray('Find your IP in Plex Settings > Network > LAN Networks\n'))
 
 	const address = prompter('Server address: ')
