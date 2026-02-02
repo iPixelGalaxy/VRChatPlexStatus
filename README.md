@@ -2,7 +2,7 @@
 
 Automatically show what you're watching or listening to on Plex in your VRChat status.
 
-> This project was generated with the help of [Claude Code](https://claude.ai/claude-code) by Anthropic.
+> This project was generated with the help of [Claude Code](https://claude.com/product/claude-code) by Anthropic.
 >
 > Inspired by [Mickman1/plex-osc](https://github.com/Mickman1/plex-osc).
 
