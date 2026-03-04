@@ -117,12 +117,52 @@ if exist "%SHORTCUT_PATH%" (
 )
 
 :: ============================================
-:: Step 4: VRCX Auto-startup
+:: Step 4: Desktop Shortcut
 :: ============================================
 
 echo.
 echo  ------------------------------------------------------------
-echo   Step 4: VRCX Auto-startup
+echo   Step 4: Desktop Shortcut
+echo  ------------------------------------------------------------
+echo.
+
+set "DESKTOP_SHORTCUT=%USERPROFILE%\Desktop\%SHORTCUT_NAME%"
+
+if exist "%DESKTOP_SHORTCUT%" (
+    echo  [!!] A desktop shortcut already exists.
+    echo.
+    set /p "OVERWRITE_DESKTOP=  Overwrite existing desktop shortcut? (y/N): "
+    if "!OVERWRITE_DESKTOP!"=="" set "OVERWRITE_DESKTOP=n"
+
+    if /i "!OVERWRITE_DESKTOP!"=="y" (
+        copy /y "%SHORTCUT_PATH%" "%DESKTOP_SHORTCUT%" >nul
+        echo.
+        echo  [OK] Desktop shortcut updated
+    ) else (
+        echo.
+        echo  [--] Skipped desktop shortcut
+    )
+) else (
+    set /p "ADD_DESKTOP=  Add shortcut to desktop? (Y/n): "
+    if "!ADD_DESKTOP!"=="" set "ADD_DESKTOP=y"
+
+    if /i "!ADD_DESKTOP!"=="y" (
+        copy /y "%SHORTCUT_PATH%" "%DESKTOP_SHORTCUT%" >nul
+        echo.
+        echo  [OK] Desktop shortcut created
+    ) else (
+        echo.
+        echo  [--] Skipped desktop shortcut
+    )
+)
+
+:: ============================================
+:: Step 5: VRCX Auto-startup
+:: ============================================
+
+echo.
+echo  ------------------------------------------------------------
+echo   Step 5: VRCX Auto-startup
 echo  ------------------------------------------------------------
 echo.
 
@@ -145,12 +185,12 @@ if exist "%APPDATA%\VRCX" (
 )
 
 :: ============================================
-:: Step 5: First-time setup
+:: Step 6: First-time setup
 :: ============================================
 
 echo.
 echo  ------------------------------------------------------------
-echo   Step 5: Configuration
+echo   Step 6: Configuration
 echo  ------------------------------------------------------------
 echo.
 

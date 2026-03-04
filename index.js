@@ -442,11 +442,20 @@ async function restoreStatus() {
 
 let isShuttingDown = false
 
+// Tracks setTimeout handles for the 5s and 60s re-sends so they can be cancelled
+let pendingStatusTimeouts = []
+
+function clearPendingStatusTimeouts() {
+	pendingStatusTimeouts.forEach(t => clearTimeout(t))
+	pendingStatusTimeouts = []
+}
+
 async function cleanup() {
 	if (isShuttingDown) return
 	isShuttingDown = true
 
 	console.log('\nShutting down...')
+	clearPendingStatusTimeouts()
 	await restoreStatus()
 	process.exit(0)
 }
@@ -563,6 +572,8 @@ async function main() {
 
 	// Retry state tracking
 	let apiRetryAttempts = []
+	// Timestamp after which a stopped-playback restore should fire (12s autoplay buffer)
+	let restorePendingAt = null
 	const MAX_RETRIES = 3
 	const RETRY_WINDOW_MS = 5 * 60 * 1000 // 5 minutes
 
@@ -657,6 +668,9 @@ async function main() {
 			)
 
 			if (adminSession) {
+				// Playback is active — cancel any pending restore countdown
+				restorePendingAt = null
+
 				let title = adminSession.title
 				let subtitle = `${adminSession.grandparentTitle} | ${adminSession.parentTitle}`
 				if (options.short)
@@ -683,27 +697,48 @@ async function main() {
 
 				// Only update VRChat status when the message content changes
 				if (lastOSCMessage !== statusMessage) {
+					// Cancel any in-flight scheduled re-sends for the previous status
+					clearPendingStatusTimeouts()
+
 					const updateResult = await updateVRChatStatus(statusMessage)
 					if (updateResult.success) {
 						console.log(chalk.green('Status:'), updateResult.message)
 						lastOSCMessage = statusMessage
 						// Save original status in case app is killed
 						savePendingRestore(originalStatus)
+
+						// Re-send the same status after 5s and 60s to compensate for VRChat API lag
+						const sentMessage = updateResult.message
+						const t1 = setTimeout(async () => {
+							try { await updateVRChatStatus(sentMessage) } catch { /* ignore */ }
+						}, 5000)
+						const t2 = setTimeout(async () => {
+							try { await updateVRChatStatus(sentMessage) } catch { /* ignore */ }
+						}, 60000)
+						pendingStatusTimeouts = [t1, t2]
 					} else if (!updateResult.permanent) {
 						console.error(chalk.red('Error updating status:'), updateResult.error)
 					}
 				}
 			}
 
-			// Playback stopped / no playback - restore original status
+			// Playback stopped / no playback - restore original status after a 12s delay
+			// (accounts for autoplay gap between tracks/episodes)
 			if (!adminSession && lastOSCMessage !== '') {
-				const updateResult = await updateVRChatStatus(originalStatus)
-				if (updateResult.success) {
-					console.log(chalk.yellow('Restored:'), `"${updateResult.message}"`)
-					lastOSCMessage = ''
-					clearPendingRestore()
-				} else if (!updateResult.permanent) {
-					console.error(chalk.red('Error restoring status:'), updateResult.error)
+				if (restorePendingAt === null) {
+					restorePendingAt = Date.now() + 12000
+					clearPendingStatusTimeouts()
+					console.log(chalk.yellow('Playback stopped, restoring status in 12 seconds...'))
+				} else if (Date.now() >= restorePendingAt) {
+					restorePendingAt = null
+					const updateResult = await updateVRChatStatus(originalStatus)
+					if (updateResult.success) {
+						console.log(chalk.yellow('Restored:'), `"${updateResult.message}"`)
+						lastOSCMessage = ''
+						clearPendingRestore()
+					} else if (!updateResult.permanent) {
+						console.error(chalk.red('Error restoring status:'), updateResult.error)
+					}
 				}
 			}
 

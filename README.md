@@ -10,7 +10,9 @@ Automatically show what you're watching or listening to on Plex in your VRChat s
 
 ## What Does This Do?
 
-When you play something on Plex (a Movie, TV Show, or Music), this app automatically updates your VRChat status to show what you're playing. When you stop playing, it restores your original status.
+When you play something on Plex (a Movie, TV Show, or Music), this app automatically updates your VRChat status to show what you're playing. When you stop playing, it waits 12 seconds before restoring your original status (to account for autoplay gaps between tracks or episodes). Press `Ctrl + C` to exit immediately and restore your status right away.
+
+To work around VRChat's unreliable API, each status update is sent three times: immediately, again after 5 seconds, and once more after 1 minute.
 
 **Example statuses:**
 - `KPop Demon Hunters` (Movie)
@@ -30,10 +32,11 @@ The setup wizard will:
 1. ✅ Install Node.js automatically (via winget)
 2. ✅ Install all required dependencies
 3. ✅ Create a launcher script
-4. ✅ Optionally add to VRCX auto-startup
-5. ✅ Guide you through Plex and VRChat login
+4. ✅ Optionally create a Desktop shortcut
+5. ✅ Optionally add to VRCX auto-startup
+6. ✅ Guide you through Plex and VRChat login
 
-That's it! After setup, just double-click the shortcut in the same directory or let VRCX start it automatically when you load up VRChat.
+That's it! After setup, just double-click the shortcut on your Desktop, in the project folder, or let VRCX start it automatically when you load up VRChat.
 
 ---
 
@@ -202,6 +205,12 @@ node index --reset-vrchat
 - Make sure you're playing media on the **admin account** (the main Plex account)
 - The polling happens every 0.5 seconds by default
 - Check that the terminal shows "Status:" messages when you play something
+- Each status update is sent three times (immediately, +5s, +1min) to account for VRChat API lag — it may take up to a minute to appear
+
+### Status restored too soon / too late
+
+- When playback stops, the app waits **12 seconds** before restoring your original status to account for autoplay gaps between tracks or episodes
+- If you want to restore immediately, press `Ctrl + C` to exit — your status is restored right away on shutdown
 
 ### "node" is not recognized
 
@@ -225,6 +234,7 @@ These files are only on your computer and are not shared with anyone.
 | File | Location | Purpose |
 |------|----------|---------|
 | `VRChatPlexStatus.lnk` | Project folder | Windows shortcut to launch the app |
+| `VRChatPlexStatus.lnk` | `%UserProfile%\Desktop\` | Desktop shortcut (optional) |
 | `VRChatPlexStatus.lnk` | `%AppData%\VRCX\Startup\` | VRCX auto-startup (optional) |
 
 To delete all saved credentials:
@@ -237,9 +247,10 @@ node index --reset-all
 ## Uninstalling
 
 1. Stop the app if it's running (`Ctrl + C`)
-2. Delete `%AppData%\VRCX\Startup\VRChatPlexStatus.lnk` (if created)
-3. Delete the project folder
-4. (Optional) Uninstall Node.js from Windows Settings > Apps
+2. Delete `%UserProfile%\Desktop\VRChatPlexStatus.lnk` (if created)
+3. Delete `%AppData%\VRCX\Startup\VRChatPlexStatus.lnk` (if created)
+4. Delete the project folder
+5. (Optional) Uninstall Node.js from Windows Settings > Apps
 
 ---
 
