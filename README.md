@@ -12,8 +12,6 @@ Automatically show what you're watching or listening to on Plex in your VRChat s
 
 When you play something on Plex (a Movie, TV Show, or Music), this app automatically updates your VRChat status to show what you're playing. When you stop playing, it waits 12 seconds before restoring your original status (to account for autoplay gaps between tracks or episodes). Press `Ctrl + C` to exit immediately and restore your status right away.
 
-To work around VRChat's unreliable API, each status update is sent three times: immediately, again after 5 seconds, and once more after 1 minute.
-
 **Example statuses:**
 - `KPop Demon Hunters` (Movie)
 - `S1E5 Breaking Bad` (TV Show)
@@ -205,7 +203,6 @@ node index --reset-vrchat
 - Make sure you're playing media on the **admin account** (the main Plex account)
 - The polling happens every 0.5 seconds by default
 - Check that the terminal shows "Status:" messages when you play something
-- Each status update is sent three times (immediately, +5s, +1min) to account for VRChat API lag — it may take up to a minute to appear
 
 ### Status restored too soon / too late
 

@@ -442,20 +442,11 @@ async function restoreStatus() {
 
 let isShuttingDown = false
 
-// Tracks setTimeout handles for the 5s and 60s re-sends so they can be cancelled
-let pendingStatusTimeouts = []
-
-function clearPendingStatusTimeouts() {
-	pendingStatusTimeouts.forEach(t => clearTimeout(t))
-	pendingStatusTimeouts = []
-}
-
 async function cleanup() {
 	if (isShuttingDown) return
 	isShuttingDown = true
 
 	console.log('\nShutting down...')
-	clearPendingStatusTimeouts()
 	await restoreStatus()
 	process.exit(0)
 }
@@ -697,25 +688,14 @@ async function main() {
 
 				// Only update VRChat status when the message content changes
 				if (lastOSCMessage !== statusMessage) {
-					// Cancel any in-flight scheduled re-sends for the previous status
-					clearPendingStatusTimeouts()
+					// Align first send to the next whole-second boundary
+					await new Promise(r => setTimeout(r, 1000 - (Date.now() % 1000)))
 
 					const updateResult = await updateVRChatStatus(statusMessage)
 					if (updateResult.success) {
 						console.log(chalk.green('Status:'), updateResult.message)
 						lastOSCMessage = statusMessage
-						// Save original status in case app is killed
 						savePendingRestore(originalStatus)
-
-						// Re-send the same status after 5s and 60s to compensate for VRChat API lag
-						const sentMessage = updateResult.message
-						const t1 = setTimeout(async () => {
-							try { await updateVRChatStatus(sentMessage) } catch { /* ignore */ }
-						}, 5000)
-						const t2 = setTimeout(async () => {
-							try { await updateVRChatStatus(sentMessage) } catch { /* ignore */ }
-						}, 60000)
-						pendingStatusTimeouts = [t1, t2]
 					} else if (!updateResult.permanent) {
 						console.error(chalk.red('Error updating status:'), updateResult.error)
 					}
@@ -727,7 +707,6 @@ async function main() {
 			if (!adminSession && lastOSCMessage !== '') {
 				if (restorePendingAt === null) {
 					restorePendingAt = Date.now() + 12000
-					clearPendingStatusTimeouts()
 					console.log(chalk.yellow('Playback stopped, restoring status in 12 seconds...'))
 				} else if (Date.now() >= restorePendingAt) {
 					restorePendingAt = null
